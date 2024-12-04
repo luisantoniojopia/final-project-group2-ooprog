@@ -3,12 +3,12 @@
 #include <string>
 #include <iomanip>
 #include <limits>
+#include <algorithm>
 
 using namespace std;
 
 class UserAccount;
 class Venue;
-class Reservation;
 class PaymentMethod;
 class PaymentRecord;
 class Report;
@@ -27,6 +27,8 @@ public:
 		system("pause");
 		system("cls");
 	}
+	
+	virtual ~BaseAccount() {}
 };
 
 class BaseMenu {
@@ -72,31 +74,219 @@ public:
     void setPassword(string& pass) { password = pass; }
 };
 
-class UserAccount : public BaseAccount{
-public: 
-	void create() override {
-		cout << "- User Create Account -\n\n";
-		
-		reset();
+class Reservation {
+private:
+    string reservationID;
+    string venueName;
+    string customerName;
+    string date;
+    string time;
+
+public:
+    // Constructor to initialize a reservation with all details
+    Reservation(string id, string venue, string customer, string date, string time)
+        : reservationID(id), venueName(venue), customerName(customer), date(date), time(time) {}
+
+    // Setters
+    void setReservationID(string id) { reservationID = id; }
+    void setVenueName(string venue) { venueName = venue; }
+    void setCustomerName(string customer) { customerName = customer; }
+    void setDate(string date) { this->date = date; }
+    void setTime(string time) { this->time = time; }
+    
+    // Getters
+    string getReservationID() const { return reservationID; }
+    string getVenueName() const { return venueName; }
+    string getCustomerName() const { return customerName; }
+    string getDate() const { return date; }
+    string getTime() const { return time; }
+    
+    void updateReservation(const string& newDate, const string& newTime) {
+        date = newDate;
+        time = newTime;
+    }
+};
+
+class UserAccount : public BaseAccount {
+private:
+    string username;
+    string password;
+    vector<Reservation*> userReservations; 
+
+public:
+	// Default Constructor
+	UserAccount() : username(""), password("") {}
+	
+    // Constructor
+    UserAccount(string user, string pass)
+        : username(user), password(pass) {}
+
+    // Setters
+    void setUsername(const string& user) { username = user; }
+    void setPassword(const string& pass) { password = pass; }
+
+    // Getters
+    string getUsername() const { return username; }
+    string getPassword() const { return password; }
+
+    // Override methods
+    void create() override {
+        cout << "- User Create Account -\n\n";
+
+        cin.ignore(); // Clear input buffer before using getline
+
+        cout << "Enter new username: ";
+        string newUsername;
+        getline(cin, newUsername);
+        setUsername(newUsername);
+
+        cout << "Enter new password: ";
+        string newPassword;
+        getline(cin, newPassword);
+        setPassword(newPassword);
+
+        cout << "\nAccount created successfully!\n";
+        cout << "Username: " << getUsername() << endl;
+        cout << "Password: " << getPassword() << endl;
+
+        reset();
+    }
+
+    void view() override {
+        cout << "- User View Account -\n\n";
+
+        cout << "Username: " << getUsername() << endl;
+        cout << "Password: " << getPassword() << endl;
+
+        reset();
+    }
+
+    void update() override {
+        cout << "- User Update Account -\n\n";
+
+        cin.ignore(); // Clear input buffer before using getline
+
+        cout << "Enter new username: ";
+        string newUsername;
+        getline(cin, newUsername);
+        setUsername(newUsername);
+
+        cout << "Enter new password: ";
+        string newPassword;
+        getline(cin, newPassword);
+        setPassword(newPassword);
+
+        cout << "\nAccount updated successfully!\n";
+        cout << "Username: " << getUsername() << endl;
+        cout << "Password: " << getPassword() << endl;
+
+        reset();
+    }
+
+    void remove() override {
+        cout << "- User Remove Account -\n\n";
+
+        setUsername("");
+        setPassword("");
+
+        cout << "Account removed successfully!\n";
+
+        reset();
+    }
+    
+    // Add a reservation to the user's reservations
+    void addReservation(Reservation* reservation) {
+        userReservations.push_back(reservation);
+    }
+
+    // Get the user's reservations
+    const vector<Reservation*>& getReservations() const {
+        return userReservations;
+    }
+
+    // Find a reservation by ID
+    Reservation* findReservationByID(const string& reservationID) {
+        for (auto& reservation : userReservations) {
+            if (reservation->getReservationID() == reservationID) {
+                return reservation;
+            }
+        }
+        return nullptr; // Return nullptr if not found
+    }
+    
+    // View all reservations
+    void viewReservations() const {
+        if (userReservations.empty()) {
+            cout << "No reservations found.\n";
+        } else {
+            for (const auto& res : userReservations) {
+                cout << "Reservation ID: " << res->getReservationID() << "\n"
+		             << "Venue: " << res->getVenueName() << "\n"
+		             << "Customer: " << res->getCustomerName() << "\n"
+		             << "Date: " << res->getDate() << "\n"
+		             << "Time: " << res->getTime() << "\n"
+		             << "-------------------------\n";
+            }
+        }
+    }
+};
+
+UserAccount* currentUser = nullptr; 
+
+class AllUsers {
+private:
+    vector<UserAccount> users;
+    static AllUsers* instance;
+    
+    AllUsers() {}
+
+public:
+	static AllUsers& getInstance() {
+	    static AllUsers instance;
+	    return instance;
 	}
 	
-	void view() override {
-		cout << "- User View Account -\n\n";
-		
-		reset();
-	}
-	
-	void update() override {
-		cout << "- User Update Account -\n\n";
-		
-		reset();
-	}
-	
-	void remove() override {
-		cout << "- User Remove Account -\n\n";
-		
-		reset();
-	}
+    void addUser(const UserAccount& user) {
+        users.push_back(user);
+    }
+
+    void viewAllUsers() const {
+        cout << "All Users:\n";
+        for (const auto& user : users) {
+            cout << "Username: " << user.getUsername() << "\n";
+        }
+        cout << endl;
+    }
+
+    UserAccount* findUser(const string& username) {
+        for (auto& user : users) {
+            if (user.getUsername() == username) {
+                return &user;
+            }
+        }
+        return nullptr;
+    }
+
+    bool removeUser(const string& username) {
+        auto it = remove_if(users.begin(), users.end(),
+                            [&username](const UserAccount& user) {
+                                return user.getUsername() == username;
+                            });
+        if (it != users.end()) {
+            users.erase(it, users.end());
+            return true;
+        }
+        return false;
+    }
+    
+    UserAccount* findUser(const string& username, const string& password) {
+    for (UserAccount& user : users) { 
+        if (user.getUsername() == username && user.getPassword() == password) {
+            return &user; 
+        }
+    }
+    return nullptr; 
+}
 };
 
 class Venue {
@@ -523,47 +713,222 @@ class AllVenues : public BaseAccount {
 	
 };
 
-/*class Reservation : public BaseAccount {
+class AllReservations : public BaseAccount {
 private:
-	string venueNames;
-	
-public:
-	Reservation(string name) : venueNames(name) {}
-	
-	void setVenueNames(string name) { venueNames = name; }
-	
-	string getVenueNames() const { return venueNames; }
-};
+    vector<Reservation*> reservations;  // List to store reservations
 
-class AllReservation : public BaseAccount {
-	private:
-		vector<Reservation*> a; 
-		
-	public:
-	void create() override {
-		cout << "- Create Reservation -\n\n";
-		
-		reset();
-	}
+public:
+    // Constructor (optional, can be used to initialize the vector with sample data)
+    AllReservations() {}
+
+	int nextID = 1;  // For generating unique reservation IDs as strings
 	
-	void view() override {
-		cout << "- View Reservation -\n\n";
-		
-		reset();
-	}
+    // Method to create a reservation
+    void create() override {
+        string venue, customer, date, time;
+        cout << "- Create Reservation -\n\n";
+        
+        // Ensure currentUser is valid before using it
+	    if (currentUser == nullptr) {
+	        cout << "Error: currentUser is not initialized!\n";
+	        return;
+	    }
+
+        cout << "Enter Venue Name: ";
+        getline(cin, venue);
+
+        cout << "Enter Customer Name: ";
+        getline(cin, customer);
+
+        // Loop until valid date is entered
+        bool dchoice = true;
+	    while (dchoice) {
+	        cout << "Enter Date (YYYY-MM-DD): ";
+	        getline(cin, date);
+	        if (date.size() == 10 && date[4] == '-' && date[7] == '-') {
+	            break;  // Exit the loop when the date format is correct
+	        }
+	        cout << "Invalid date format. Please try again.\n";
+	    }
 	
-	void update() override {
-		cout << "- Update Reservation -\n\n";
-		
-		reset();
-	}
-	
-	void remove() override {
-		cout << "- Remove Reservation -\n\n";
-		
-		reset();
-	}
-}; */
+	    // Loop until valid time is entered
+	    bool tchoice = true;
+	    while (tchoice) {
+	        cout << "Enter Time (HH:MM): ";
+	        getline(cin, time);
+	        if (time.size() == 5 && time[2] == ':') {
+	            break;  // Exit the loop when the time format is correct
+	        }
+	        cout << "Invalid time format. Please try again.\n";
+	    }
+
+		// Debugging: Check if the time was read properly
+    	cout << "You entered time: " << time << endl;
+
+        // Generate a unique reservation ID
+        stringstream ss;
+        ss << "RES" << setw(3) << setfill('0') << nextID++;  // Example: RES001, RES002, etc.
+        string id = ss.str();
+
+        // Create the reservation and add it to the list
+        Reservation* newReservation = new Reservation(id, venue, customer, date, time);
+        if (newReservation == nullptr) {
+	        cout << "Error: Failed to create a new reservation!\n";
+	        return;
+	    }
+    
+        // Add the reservation to the current user's list
+	    if (currentUser != nullptr) {
+	        currentUser->addReservation(newReservation);
+	        cout << "Reservation created successfully with ID: " << id << "\n";
+	    } else {
+	        cout << "Error: currentUser is null, unable to add reservation.\n";
+	        delete newReservation;  // Clean up if currentUser is invalid
+	        return;
+	    }
+	    
+        reset();
+    }
+    
+    Reservation* searchReservation(const string& reservationID) {
+        for (auto& res : reservations) {
+            if (res->getReservationID() == reservationID) {
+                return res;
+            }
+        }
+        return nullptr; // Return nullptr if reservation not found
+    }
+    
+    bool deleteReservation(const string& reservationID) {
+        for (auto it = reservations.begin(); it != reservations.end(); ++it) {
+            if ((*it)->getReservationID() == reservationID) {
+                delete *it;
+                reservations.erase(it);
+                return true;
+            }
+        }
+        return false; // Return false if reservation not found
+    }
+    
+    void viewReservation() {
+    	const vector<Reservation*>& reservations = currentUser->getReservations();
+    	
+    	if (reservations.empty()) {
+        cout << "You have no reservations.\n";
+	    } else {
+	        cout << "Your Reservations:\n";
+	        for (auto& reservation : reservations) {
+	            cout << "Reservation ID: " << reservation->getReservationID() << "\n";
+	            cout << "Venue: " << reservation->getVenueName() << "\n";
+	            cout << "Customer: " << reservation->getCustomerName() << "\n";
+	            cout << "Date: " << reservation->getDate() << "\n";
+	            cout << "Time: " << reservation->getTime() << "\n";
+	            cout << "-------------------------\n";
+	        }
+	    }
+    }
+    
+    // Method to view all reservations
+    void view() override {
+        cout << "- View Reservations -\n\n";
+        if (reservations.empty()) {
+            cout << "No reservations to display.\n";
+        } else {
+            for (size_t i = 0; i < reservations.size(); ++i) {
+                Reservation* r = reservations[i];
+                cout << "Reservation ID: " << r->getReservationID() << "\n";
+                cout << "Venue: " << r->getVenueName() << "\n";
+                cout << "Customer: " << r->getCustomerName() << "\n";
+                cout << "Date: " << r->getDate() << "\n";
+                cout << "Time: " << r->getTime() << "\n";
+                cout << "--------------------\n";
+            }
+        }
+
+        reset();
+    }
+
+    // Method to update a reservation
+    void update() override {
+        cout << "- Update Reservation -\n\n";
+        
+        string id;
+        cout << "Enter Reservation ID to Update: ";
+        cin >> id;
+
+        // Find the reservation by ID
+        Reservation* selectedReservation = nullptr;
+        for (size_t i = 0; i < reservations.size(); ++i) {
+            if (reservations[i]->getReservationID() == id) {
+                selectedReservation = reservations[i];
+                break;
+            }
+        }
+
+        if (!selectedReservation) {
+            cout << "Reservation not found.\n";
+            return;
+        }
+
+        string venue, customer, date, time;
+        cout << "Enter New Venue Name: ";
+        cin.ignore();
+        getline(cin, venue);
+
+        cout << "Enter New Customer Name: ";
+        getline(cin, customer);
+
+        cout << "Enter New Date (YYYY-MM-DD): ";
+        getline(cin, date);
+
+        cout << "Enter New Time (HH:MM): ";
+        getline(cin, time);
+
+        selectedReservation->setVenueName(venue);
+        selectedReservation->setCustomerName(customer);
+        selectedReservation->setDate(date);
+        selectedReservation->setTime(time);
+
+        cout << "Reservation updated successfully.\n";
+
+        reset();
+    }
+
+    // Method to remove a reservation
+    void remove() override {
+        cout << "- Remove Reservation -\n\n";
+        
+        string id;
+        cout << "Enter Reservation ID to Remove: ";
+        cin >> id;
+
+        // Find and remove the reservation
+        bool found = false;
+        for (size_t i = 0; i < reservations.size(); ++i) {
+            if (reservations[i]->getReservationID() == id) {
+                delete reservations[i];
+                reservations.erase(reservations.begin() + i);
+                found = true;
+                break;
+            }
+        }
+
+        if (found) {
+            cout << "Reservation removed successfully.\n";
+        } else {
+            cout << "Reservation not found.\n";
+        }
+
+        reset();
+    }
+
+    // Destructor to clean up dynamic memory
+    ~AllReservations() {
+        for (Reservation* r : reservations) {
+            delete r;
+        }
+    }
+};
 
 class PaymentMethod : public BaseAccount {
 public:
@@ -652,7 +1017,7 @@ public:
 	}
 };
 
-int AdminMenu() {
+int AdminMenu(AllUsers& allUsers) {
 	//reset();
 	bool condition = true;
 	int choice;
@@ -672,7 +1037,9 @@ int AdminMenu() {
 
 		switch(choice) {
 			case 1: {
-				// reset();
+				cout << endl;
+				system("pause");
+				system("cls");
 				bool MUAcondition = true;
 				int MUAchoice;
 
@@ -689,27 +1056,49 @@ int AdminMenu() {
 
 					switch(MUAchoice) {
 						case 1: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							UserAccount ua;
-							ua.create();
+			                ua.create();
+			                allUsers.addUser(ua);
 							break;
 						}
 						case 2: {
-							// reset();
-							UserAccount ua;
-							ua.view();
+							cout << endl;
+							system("pause");
+							system("cls");
+							allUsers.viewAllUsers();
 							break;
 						}
 						case 3: {
-							// reset();
-							UserAccount ua;
-							ua.update();
+							cout << endl;
+							system("pause");
+							system("cls");
+							string username;
+			                cout << "Enter username to update: ";
+			                cin >> username;
+			                UserAccount* user = allUsers.findUser(username);
+			                if (user) {
+			                    user->update();
+			                } else {
+			                    cout << "User not found.\n";
+			                }
 							break;
 						}
 						case 4: {
-							// reset();
-							UserAccount ua;
-							ua.remove();
+							cout << endl;
+							system("pause");
+							system("cls");
+							string username;
+			                cout << "Enter username to remove: ";
+			                cin >> username;
+			                bool removed = allUsers.removeUser(username);
+			                if (removed) {
+			                    cout << "User removed successfully.\n";
+			                } else {
+			                    cout << "User not found.\n";
+			                }
 							break;
 						}
 						case 5: {
@@ -720,7 +1109,9 @@ int AdminMenu() {
 							cout << "Invalid choice. Please try again.\n";
 					}
 				}
-				// reset();
+				cout << endl;
+				system("pause");
+				system("cls");
 				break;
 			}
 			case 2: {
@@ -865,7 +1256,9 @@ int AdminMenu() {
 				    break;
 				}
 			case 4: {
-				// reset();
+				cout << endl;
+				system("pause");
+				system("cls");
 				bool MPMScondition = true;
 				int MPMSchoice;
 
@@ -882,25 +1275,33 @@ int AdminMenu() {
 
 					switch(MPMSchoice) {
 						case 1: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentMethod pm;
 							pm.create();
 							break;
 						}
 						case 2: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentMethod pm;
 							pm.view();
 							break;
 						}
 						case 3: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentMethod pm;
 							pm.update();
 							break;
 						}
 						case 4: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentMethod pm;
 							pm.remove();
 							break;
@@ -913,11 +1314,15 @@ int AdminMenu() {
 							cout << "Invalid choice. Please try again.\n";
 						}
 					}
-					// reset();
+					cout << endl;
+					system("pause");
+					system("cls");
 					break;
 				}
 			case 5: {
-				// reset();
+				cout << endl;
+				system("pause");
+				system("cls");
 				bool MPRScondition = true;
 				int MPRSchoice;
 
@@ -934,25 +1339,33 @@ int AdminMenu() {
 
 					switch(MPRSchoice) {
 						case 1: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentRecord pr;
 							pr.pendingPayment();
 							break;
 						}
 						case 2: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentRecord pr;
 							pr.overduePayment();
 							break;
 						}
 						case 3: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentRecord pr;
 							pr.completedPayment();
 							break;
 						}
 						case 4: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							PaymentRecord pr;
 							pr.deletePayment();
 							break;
@@ -965,11 +1378,15 @@ int AdminMenu() {
 							cout << "Invalid choice. Please try again.\n";
 						}
 					}
-					// reset();
+					cout << endl;
+					system("pause");
+					system("cls");
 					break;
 				}
 			case 6: {
-				// reset();
+				cout << endl;
+				system("pause");
+				system("cls");
 				bool MRScondition = true;
 				int MRSchoice;
 
@@ -986,25 +1403,33 @@ int AdminMenu() {
 
 					switch(MRSchoice) {
 						case 1: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							Report r;
 							r.create();
 							break;
 						}
 						case 2: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							Report r;
 							r.view();
 							break;
 						}
 						case 3: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							Report r;
 							r.update();
 							break;
 						}
 						case 4: {
-							// reset();
+							cout << endl;
+							system("pause");
+							system("cls");
 							Report r;
 							r.remove();
 							break;
@@ -1017,7 +1442,9 @@ int AdminMenu() {
 							cout << "Invalid choice. Please try again.\n";
 						}
 					}
-					// reset();
+					cout << endl;
+					system("pause");
+					system("cls");
 					break;
 				}
 			case 7: {
@@ -1033,7 +1460,7 @@ int AdminMenu() {
 
 class AdminLogIn {
 public:
-	int logIn() {
+	int logIn(AllUsers& allUsers) {
 		string username, password;
 
 		cout << "- Admin Log In -\n\n";
@@ -1053,7 +1480,7 @@ public:
 			cout << "Login successful! Welcome, " << username << "!\n\n";
 			system("pause");
 			system("cls");
-			AdminMenu();
+			AdminMenu(allUsers);
 			return 0; // Login successful
 		}
 
@@ -1064,118 +1491,208 @@ public:
 	}
 };
 
-class UserMenu : public BaseMenu {
-public:
-	void menu() override {
-		reset();
-		bool condition = true;
-		int choice;
-		AllVenues allVenue;
-		Venue v('x', "", "", 0, 0.0, "");
-		
-		while(condition) {
-			cout << "Welcome to the Venue Reservation Management System!\n\n";
-			cout << "- Choose a menu: -\n";
-			cout << "1 - Search Venues\n";
-			cout << "2 - Create Reservations\n";
-			cout << "3 - View Reservations\n";
-			cout << "4 - Update 	Reservations\n";
-			cout << "5 - Delete Reservations\n";
-			cout << "6 - Exit system\n";
-			cout << ": ";
-			cin >> choice;
-			reset();
-			
-			switch(choice) {
-				case 1: {
-		
-					allVenue.view();
-					break;
-				}
-				case 2: {
-					string name, date, time;
-					cout << "Enter name: ";
-				    getline(cin, name);
-				    cout << "Enter date: ";
-				    getline(cin, date);
-				    cout << "enter time: ";
-				    getline(cin, time);
-				    v.reserveVenue(name, date, time);
-					break;
-				}
-				case 3: {
-					//Reservation r;
-					//r.view();
-					break;
-				}
-				case 4: {
-					//Reservation r;
-					//r.update();
-					break;
-				}
-				case 5: {
-					//Reservation r;
-					//r.remove();
-					break;
-				}
-				case 6: {
-					cout << "Exiting system. Thank you for using VRMS!";
-					exit(0);
-					break;
-				}
-				default:
-					cout << "Invalid choice. Please try again.\n";
-			}
-		}
-	}
-};
+int UserMenu(const UserAccount& user) {
+    cout << endl;
+    system("pause");
+    system("cls");
+
+    bool condition = true;
+    int choice;
+    AllVenues allVenue;
+    AllReservations allReservations;
+    Venue v('x', "", "", 0, 0.0, "");
+
+    while (condition) {
+        cout << "Welcome to the Venue Reservation Management System!\n\n";
+        cout << "- Choose a menu: -\n";
+        cout << "1 - Search Venues\n";
+        cout << "2 - Create Reservations\n";
+        cout << "3 - View Reservations\n";
+        cout << "4 - Update Reservations\n";
+        cout << "5 - Delete Reservations\n";
+        cout << "6 - Return\n";
+        cout << "7 - Exit system\n";
+        cout << ": ";
+        cin >> choice;
+        cin.ignore();
+        cout << endl;
+        system("pause");
+        system("cls");
+
+        switch (choice) {
+            case 1: {
+                cout << "\n- Search Venues -\n\n";
+                allVenue.view();
+                cout << endl;
+                system("pause");
+                system("cls");
+                break;
+            }
+            case 2: {
+                cout << "\n- Create a Reservation -\n\n";
+				allReservations.create();
+				cout << endl;
+                system("pause");
+                system("cls");
+                break;
+            }
+            case 3: {
+                cout << "\n- View Reservations -\n\n";
+                user.viewReservations();
+                cout << endl;
+                system("pause");
+                system("cls");
+                break;
+            }
+            case 4: {
+                cout << "\n- Update Reservation -\n\n";
+
+                string reservationID, newDate, newTime;
+                cout << "Enter Reservation ID to update: ";
+                cin.ignore();
+                getline(cin, reservationID);
+
+                Reservation* reservation = allReservations.searchReservation(reservationID);
+
+                if (reservation) {
+                    cout << "Enter new reservation date (YYYY-MM-DD): ";
+                    getline(cin, newDate);
+                    if (newDate.size() != 10 || newDate[4] != '-' || newDate[7] != '-') {
+                        cout << "Invalid date format. Please try again.\n";
+                        break;
+                    }
+
+                    cout << "Enter new reservation time (HH:MM): ";
+                    getline(cin, newTime);
+                    if (newTime.size() != 5 || newTime[2] != ':') {
+                        cout << "Invalid time format. Please try again.\n";
+                        break;
+                    }
+
+                    reservation->updateReservation(newDate, newTime);
+                    cout << "Reservation successfully updated!\n";
+                } else {
+                    cout << "Reservation not found. Please try again.\n";
+                }
+                cout << endl;
+                system("pause");
+                system("cls");
+                break;
+            }
+            case 5: {
+                cout << "\n- Delete Reservation -\n\n";
+
+                string reservationID;
+                cout << "Enter Reservation ID to delete: ";
+                cin.ignore();
+                getline(cin, reservationID);
+
+                if (allReservations.deleteReservation(reservationID)) {
+                    cout << "Reservation successfully deleted!\n";
+                } else {
+                    cout << "Reservation not found. Please try again.\n";
+                }
+                cout << endl;
+                system("pause");
+                system("cls");
+                break;
+            }
+            case 6: {
+                condition = false; // Return to the previous menu
+                break;
+            }
+            case 7: {
+                cout << "Exiting system. Thank you for using VRMS!";
+                exit(0); // Exit the application
+                break;
+            }
+            default: {
+                cout << "Invalid choice. Please try again.\n";
+                cout << endl;
+                system("pause");
+                system("cls");
+            }
+        }
+    }
+    return 0;
+}
 
 class UserLogIn {
 public:
-	int logIn() {
-		cout << "- Admin log In account -\n\n";
-		
-		cout << endl;
-		system("pause");
-		system("cls");
-	}
-	
-	void registerOrLogIn() {
-		bool condition = true;
-		int choice;
-		
-		while(condition) {
-			cout << "- Log In or Register: -\n\n";
-			cout << "1 - Register\n";
+    int logIn(AllUsers& allUsers) {
+        string username, password;
+        cout << "- User Log In -\n\n";
+        
+        cout << "Enter username: ";
+        cin.ignore();
+        getline(cin, username);
+
+        cout << "Enter password: ";
+        getline(cin, password);
+
+        // Check if the user exists
+        UserAccount* user = allUsers.findUser(username);
+        if (user && user->getPassword() == password) {
+            cout << "Login successful! Welcome, " << username << "!\n\n";
+            system("pause");
+            system("cls");
+            UserMenu(*user);
+            return 0; // Success
+        }
+
+        cout << "Invalid username or password.\n\n";
+        system("pause");
+        system("cls");
+        return -1; // Failure
+    }
+
+    void registerOrLogIn(AllUsers& allUsers) {
+        bool condition = true;
+        int choice;
+
+        while (condition) {
+            cout << "- Log In or Register -\n\n";
+            cout << "1 - Register\n";
             cout << "2 - Log In\n";
             cout << "3 - Return\n";
             cout << ": ";
             cin >> choice;
-            
-            switch(choice) {
-            	case 1: {
-            		UserAccount uc;
-            		cout << endl;
-					system("pause");
-					system("cls");
-            		uc.create();
-            		break;
-            	}
-            	case 2: {
-            		cout << endl;
-					system("pause");
-					system("cls");
-            		logIn();
-            		break;
-            	}
-            	case 3:
-            		condition = false;
-            		break;
-            	default:
-            		cout << "Invalid input. Please try again.\n";
-			}
-		}
-	}
+
+            switch (choice) {
+                case 1: {
+                    UserAccount newUser;
+                    newUser.create(); // Assume this collects user info
+                    allUsers.addUser(newUser); // Add to global list
+                    cout << "Registration successful!\n\n";
+                    system("pause");
+                    system("cls");
+                    break;
+                }
+                case 2: {
+                    string username, password;
+		            cout << "Enter Username: ";
+		            cin >> username;
+		            cout << "Enter Password: ";
+		            cin >> password;
+		
+		            UserAccount* user = allUsers.findUser(username, password);
+		            if (user) {
+		                currentUser = user;  // Set currentUser
+		                cout << "Login successful!\n";
+		                UserMenu(*user);
+		            } else {
+		                cout << "Login failed. Please try again.\n";
+		            }
+                    break;
+                }
+                case 3:
+                    condition = false; // Return to RoleMenu
+                    break;
+                default:
+                    cout << "Invalid input. Please try again.\n";
+            }
+        }
+    }
 };
 
 class RoleMenu : public BaseMenu {
@@ -1200,14 +1717,14 @@ public:
 			switch (choice) {
 				case 1: {
 					reset();
-					UserLogIn ua;
-					ua.registerOrLogIn();  // Proceed with user login
-					break;
+					UserLogIn userLogin;
+                    userLogin.registerOrLogIn(AllUsers::getInstance()); // Pass AllUsers
+                    break;
 				}
 				case 2: {
-					AdminLogIn ac;
-					ac.logIn();
-					break;
+					AdminLogIn adminLogin;
+                    adminLogin.logIn(AllUsers::getInstance()); // Pass AllUsers
+                    break;
 				}
 				case 3: {
 					condition = false;  // Exit the menu loop
